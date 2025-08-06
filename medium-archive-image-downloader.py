@@ -32,6 +32,7 @@ def download_image(url, save_path):
             with open(save_path, 'wb') as file:
                 for chunk in response.iter_content(1024):
                     file.write(chunk)
+            print(f"    Downloaded: {os.path.basename(save_path)}")
             return None
         else:
             return f"Failed to download (HTTP status code {response.status_code})"
@@ -39,6 +40,7 @@ def download_image(url, save_path):
         return str(e)
 
 def process_html_file(html_file, base_url, export_dir):
+    print(f"\nProcessing file: {html_file}")
     # Extract 'user-friendly name' by removing the prefix and token part
     name_parts = html_file.split('_')
     user_friendly_name = '_'.join(name_parts[1:-1]) if len(name_parts) > 2 else name_parts[1]
@@ -87,13 +89,17 @@ def process_html_file(html_file, base_url, export_dir):
         file.write(str(soup))
 
     if error_log:
-        with open(os.path.join(img_dir_path, 'errors.txt'), 'w') as file:
+        error_file = os.path.join(img_dir_path, 'errors.txt')
+        print(f"    Writing errors to: {error_file}")
+        with open(error_file, 'w') as file:
             json.dump(error_log, file, indent=4)
+    print(f"Completed processing: {html_file}")
 
 # Create the 'export' directory and process each HTML file in the current directory
 base_url = 'https://cdn-images-1.medium.com/'
 export_dir = os.path.join(os.getcwd(), 'export')
 os.makedirs(export_dir, exist_ok=True)
+print(f"Starting processing - output will be in: {export_dir}")
 
 for filename in os.listdir(os.getcwd()):
     if filename.endswith('.html'):
