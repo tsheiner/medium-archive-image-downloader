@@ -62,6 +62,7 @@ def process_html_file(html_file, base_url, export_dir):
         html_content = file.read()
 
     soup = BeautifulSoup(html_content, 'html.parser')
+    img_counter = 1
     for img_tag in soup.find_all('img'):
         original_src = img_tag['src']
 
@@ -71,7 +72,34 @@ def process_html_file(html_file, base_url, export_dir):
 
         modified_src = modify_url(original_src)
         file_ext = get_file_extension(modified_src)
-        img_name = img_tag.get('alt', os.path.basename(urlparse(modified_src).path))
+        
+        # First try to get a meaningful name from the figure caption
+        if figure_parent := img_tag.find_parent('figure'):
+            if figcaption := figure_parent.find('figcaption'):
+                caption = figcaption.get_text().strip()
+                # Remove "Photo by..." and everything after
+                if "Photo by" in caption:
+                    caption = caption.split("Photo by")[0]
+                # Clean the caption to make it filename-friendly
+                img_name = "".join(c for c in caption if c.isalnum() or c in (' ','-','_')).strip()
+                img_name = img_name.replace(' ', '-')[:50]  # limit length
+        
+        # If no caption or caption was empty, try alt text
+        if not locals().get('img_name') or not img_name:
+            alt_text = img_tag.get('alt', '').strip()
+            if alt_text:
+                img_name = "".join(c for c in alt_text if c.isalnum() or c in (' ','-','_')).strip()
+                img_name = img_name.replace(' ', '-')[:50]  # limit length
+        
+        # If neither caption nor alt text provided a name, use image ID or counter
+        if not locals().get('img_name') or not img_name:
+            data_image_id = img_tag.get('data-image-id', '')
+            if data_image_id:
+                img_name = data_image_id.replace('*', '').replace('/', '-')
+            else:
+                img_name = f"{user_friendly_name}-image-{img_counter}"
+        
+        img_counter += 1
         
         # Append the file extension if not already present
         if not img_name.endswith(file_ext):
